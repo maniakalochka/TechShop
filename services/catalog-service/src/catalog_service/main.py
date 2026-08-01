@@ -1,9 +1,10 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI
+
 from catalog_service.core.logging import get_logger
 from catalog_service.database.session import AsyncSessionLocal, engine
-from fastapi import FastAPI
 
 logger = get_logger("catalog_service.main")
 
