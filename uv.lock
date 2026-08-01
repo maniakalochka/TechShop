@@ -552,6 +552,12 @@ wheels = [
 ]
 
 [[package]]
+name = "product"
+version = "0.1.1.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/4f/37/1542f1010e6d35d7af34742d708f6ebaaf85c720f8546d2100fbcbf01318/product-0.1.1.1.tar.gz", hash = "sha256:a78873fc640e4de4d47346a05e19f6d4318b66a47b65307cd753d4e514e2ce13", size = 769, upload-time = "2017-05-14T17:34:40.027Z" }
+
+[[package]]
 name = "pydantic"
 version = "2.13.4"
 source = { registry = "https://pypi.org/simple" }
@@ -834,6 +840,7 @@ dependencies = [
     { name = "alembic" },
     { name = "asyncpg" },
     { name = "fastapi" },
+    { name = "product" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "sqlalchemy" },
@@ -857,6 +864,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.18.5" },
     { name = "asyncpg", specifier = ">=0.31.0" },
     { name = "fastapi", specifier = ">=0.141.1" },
+    { name = "product", specifier = ">=0.1.1.1" },
     { name = "pydantic", specifier = ">=2.13.4" },
     { name = "pydantic-settings", specifier = ">=2.14.2" },
     { name = "sqlalchemy", specifier = ">=2.0.51" },
