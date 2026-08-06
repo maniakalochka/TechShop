@@ -72,5 +72,10 @@ exclude = [
 ]
 
 [tool.pytest.ini_options]
-pythonpath = ["services/catalog-service/src"]
-testpaths = ["services/catalog-service/tests"]
+pythonpath = [
+    "services/catalog-service/src",
+    "services/catalog-service/tests",
+]
+testpaths = [
+    "services/catalog-service/tests",
+]
