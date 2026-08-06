@@ -4,6 +4,7 @@ from logging.config import fileConfig
 from alembic import context
 from catalog_service.core.config import settings
 from catalog_service.database.base import Base
+from catalog_service.product.model import Product  # noqa: F401
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
