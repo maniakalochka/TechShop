@@ -2,6 +2,7 @@ import asyncio
 from logging.config import fileConfig
 
 from alembic import context
+from catalog_service.category.model import Category  # noqa: F401
 from catalog_service.core.config import settings
 from catalog_service.database.base import Base
 from catalog_service.product.model import Product  # noqa: F401
@@ -9,7 +10,7 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 config = context.config
-config.set_main_option("sqlalchemy.url", settings.DB_URL)
+config.set_main_option("sqlalchemy.url", settings.CATALOG_DB_URL)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
