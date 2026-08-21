@@ -1,44 +1,65 @@
+import uuid
+from decimal import Decimal
+
 import pytest
-from catalog_service.product.service import ProductService
+from catalog_service.category.model import Category
+from catalog_service.product.schemas import ProductCreate
+from catalog_service.product.service import CategoryNotFoundError, ProductService
 
 
 class MockProductRepository:
-    def __init__(self):
-        self.products = {}
+    def __init__(self) -> None:
+        self.products: dict[uuid.UUID, object] = {}
 
-    async def create_product(self, product_data):
-        self.products[product_data.id] = product_data
-        return product_data
+    async def get_product_by_name(self, name: str) -> None:
+        return None
 
-    async def get_product_by_id(self, product_id):
-        return self.products.get(product_id)
+    async def create_product(self, product: object) -> object:
+        product_id = product.id  # type: ignore[attr-defined]
+        self.products[product_id] = product
+        return product
 
 
-@pytest.mark.asyncio
-async def test_create_product(product_factory):
-    # Arrange
-    mock_repo = MockProductRepository()
-    service = ProductService(mock_repo)
-    product_data = product_factory()
+class MockCategoryRepository:
+    def __init__(self, category: Category | None) -> None:
+        self.category = category
 
-    # Act
-    created_product = await service.create_product(product_data)
-
-    # Assert
-    assert created_product == product_data
-    assert mock_repo.products[product_data.id] == product_data
+    async def get_category_by_id(self, category_id: uuid.UUID) -> Category | None:
+        if self.category is not None and self.category.id == category_id:
+            return self.category
+        return None
 
 
 @pytest.mark.asyncio
-async def test_get_product(product_factory):
-    # Arrange
-    mock_repo = MockProductRepository()
-    service = ProductService(mock_repo)
-    product_data = product_factory()
-    await mock_repo.create_product(product_data)
+async def test_create_product_persists_valid_payload(category_id: uuid.UUID) -> None:
+    category = Category(id=category_id, name="Gaming")
+    repository = MockProductRepository()
+    service = ProductService(repository, MockCategoryRepository(category))  # type: ignore[arg-type]
+    payload = ProductCreate(
+        name="Console",
+        description="Current generation console",
+        price=Decimal("499.99"),
+        quantity=10,
+        category_id=category_id,
+    )
 
-    # Act
-    retrieved_product = await service.get_product(product_data.id)
+    product = await service.create_product(payload)
 
-    # Assert
-    assert retrieved_product == product_data
+    assert product.name == "Console"
+    assert product.price == Decimal("499.99")
+    assert product.category_id == category_id
+    assert repository.products[product.id] is product
+
+
+@pytest.mark.asyncio
+async def test_create_product_requires_existing_category(category_id: uuid.UUID) -> None:
+    service = ProductService(MockProductRepository(), MockCategoryRepository(None))  # type: ignore[arg-type]
+    payload = ProductCreate(
+        name="Console",
+        price=Decimal("499.99"),
+        quantity=10,
+        category_id=category_id,
+    )
+
+    with pytest.raises(CategoryNotFoundError):
+        await service.create_product(payload)

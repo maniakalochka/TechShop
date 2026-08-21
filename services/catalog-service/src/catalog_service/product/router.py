@@ -1,36 +1,88 @@
 import uuid
-from collections.abc import Sequence
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from catalog_service.product.dependencies import get_product_service
-from catalog_service.product.model import Product
-from catalog_service.product.schemas import Product as ProductSchema
-from catalog_service.product.service import ProductService
+from catalog_service.product.schemas import ProductCreate, ProductRead, ProductUpdate
+from catalog_service.product.service import (
+    CategoryNotFoundError,
+    ProductAlreadyExistsError,
+    ProductService,
+)
 
-product_router = APIRouter(prefix="/", tags=["products"])
+product_router = APIRouter(prefix="/products", tags=["products"])
 
 
-@product_router.post("", response_model=ProductSchema, status_code=status.HTTP_201_CREATED)
+@product_router.post("", response_model=ProductRead, status_code=status.HTTP_201_CREATED)
 async def create_product(
-    payload: Product, service: Annotated[ProductService, Depends(get_product_service)]
-) -> Product:
-    product = await service.create_product(payload)
-    return product
+    payload: ProductCreate,
+    service: Annotated[ProductService, Depends(get_product_service)],
+) -> ProductRead:
+    try:
+        product = await service.create_product(payload)
+    except ProductAlreadyExistsError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product name already exists.",
+        ) from error
+    except CategoryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found.",
+        ) from error
+    return ProductRead.model_validate(product)
 
 
-@product_router.get("{product_id}", response_model=ProductSchema, status_code=status.HTTP_200_OK)
-async def get_product(
-    product_id: uuid.UUID, service: Annotated[ProductService, Depends(get_product_service)]
-) -> Product | None:
-    product = await service.get_product(product_id)
-    return product
-
-
-@product_router.get("list", response_model=list[ProductSchema], status_code=status.HTTP_200_OK)
+@product_router.get("", response_model=list[ProductRead])
 async def list_products(
     service: Annotated[ProductService, Depends(get_product_service)],
-) -> Sequence[Product]:
-    products = await service.list()
-    return products
+    limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    offset: Annotated[int, Query(ge=0)] = 0,
+) -> list[ProductRead]:
+    products = await service.list(limit=limit, offset=offset)
+    return [ProductRead.model_validate(product) for product in products]
+
+
+@product_router.get("/{product_id}", response_model=ProductRead)
+async def get_product(
+    product_id: uuid.UUID,
+    service: Annotated[ProductService, Depends(get_product_service)],
+) -> ProductRead:
+    product = await service.get_product(product_id)
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
+    return ProductRead.model_validate(product)
+
+
+@product_router.patch("/{product_id}", response_model=ProductRead)
+async def update_product(
+    product_id: uuid.UUID,
+    payload: ProductUpdate,
+    service: Annotated[ProductService, Depends(get_product_service)],
+) -> ProductRead:
+    try:
+        product = await service.update_product(product_id, payload)
+    except ProductAlreadyExistsError as error:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product name already exists.",
+        ) from error
+    except CategoryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Category not found.",
+        ) from error
+    if product is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
+    return ProductRead.model_validate(product)
+
+
+@product_router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_product(
+    product_id: uuid.UUID,
+    service: Annotated[ProductService, Depends(get_product_service)],
+) -> Response:
+    if not await service.delete_product(product_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
