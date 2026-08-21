@@ -182,4 +182,8 @@ docs/
 logs.txt
 logs/
 
+*.swp
 .python-version
+
+# AI
+AGENTS.md
