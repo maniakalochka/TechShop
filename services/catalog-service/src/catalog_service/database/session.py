@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from catalog_service.core.config import settings
 
-engine = create_async_engine(url=settings.DB_URL, echo=False)
+engine = create_async_engine(url=settings.CATALOG_DB_URL, echo=settings.DB_ECHO)
 
 AsyncSessionLocal = async_sessionmaker(
     bind=engine,
