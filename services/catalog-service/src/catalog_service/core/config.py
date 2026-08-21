@@ -1,17 +1,24 @@
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+BASE_DIR = Path(__file__).resolve().parents[5]
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
-
-    DB_URL: str
-    DB_USER: str
-    DB_PASSWORD: str
-    DB_NAME: str
-    DB_HOST: str
-    DB_PORT: int
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR / ".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
+    CATALOG_DB_URL: str
+    CATALOG_DB_USER: str
+    CATALOG_DB_PASSWORD: str
+    CATALOG_DB_NAME: str
+    CATALOG_DB_HOST: str
+    CATALOG_DB_PORT: int
+    DB_ECHO: bool = False
 
 
 @lru_cache
