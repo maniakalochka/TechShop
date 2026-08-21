@@ -6,7 +6,8 @@ RUN pip install uv
 
 COPY pyproject.toml uv.lock ./
 
-RUN uv sync --frozen --no-dev
+ARG INSTALL_DEV=false
+RUN if [ "$INSTALL_DEV" = "true" ]; then uv sync --frozen; else uv sync --frozen --no-dev; fi
 
 COPY services/catalog-service ./services/catalog-service
 

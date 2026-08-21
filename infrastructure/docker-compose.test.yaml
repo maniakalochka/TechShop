@@ -1,0 +1,51 @@
+services:
+  catalog-test-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: catalog_test
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d catalog_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  catalog-tests:
+    build:
+      context: ..
+      dockerfile: services/catalog-service/Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    environment:
+      CATALOG_DB_URL: postgresql+asyncpg://postgres:postgres@catalog-test-db:5432/catalog_test
+      CATALOG_DB_USER: postgres
+      CATALOG_DB_PASSWORD: postgres
+      CATALOG_DB_NAME: catalog_test
+      CATALOG_DB_HOST: catalog-test-db
+      CATALOG_DB_PORT: 5432
+      DB_ECHO: "false"
+      RUN_DB_TESTS: "true"
+    depends_on:
+      catalog-test-migrator:
+        condition: service_completed_successfully
+    entrypoint: ["uv", "run", "pytest"]
+
+  catalog-test-migrator:
+    build:
+      context: ..
+      dockerfile: services/catalog-service/Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    environment:
+      CATALOG_DB_URL: postgresql+asyncpg://postgres:postgres@catalog-test-db:5432/catalog_test
+      CATALOG_DB_USER: postgres
+      CATALOG_DB_PASSWORD: postgres
+      CATALOG_DB_NAME: catalog_test
+      CATALOG_DB_HOST: catalog-test-db
+      CATALOG_DB_PORT: 5432
+      DB_ECHO: "false"
+    depends_on:
+      catalog-test-db:
+        condition: service_healthy
+    entrypoint: ["uv", "run", "alembic", "upgrade", "head"]

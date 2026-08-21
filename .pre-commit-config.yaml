@@ -23,12 +23,10 @@ repos:
       - id: mypy
         name: mypy
         language: system
-        entry: env MYPYPATH=src uv run mypy --explicit-package-bases -p catalog_service
+        entry: uv run mypy
         types: [ python ]
         pass_filenames: false
         files: ^services/catalog-service/
-
-
       - id: pytest
         name: pytest
         entry: uv run pytest

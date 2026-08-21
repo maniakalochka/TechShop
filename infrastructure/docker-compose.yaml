@@ -1,63 +1,75 @@
+name: techshop
+
 services:
   catalog-db:
     image: postgres:17
-
+    restart: unless-stopped
+    env_file:
+      - ../.env
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
-
+      POSTGRES_USER: ${CATALOG_DB_USER:?CATALOG_DB_USER must be set}
+      POSTGRES_PASSWORD: ${CATALOG_DB_PASSWORD:?CATALOG_DB_PASSWORD must be set}
+      POSTGRES_DB: ${CATALOG_DB_NAME:?CATALOG_DB_NAME must be set}
     healthcheck:
       test:
         [
           "CMD-SHELL",
-          "pg_isready -U ${DB_USER} -d ${DB_NAME}"
+          "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB",
         ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 5s
     volumes:
       - catalog-db-data:/var/lib/postgresql/data
-
+    networks:
+      - techshop
 
   catalog-migrator:
     build:
       context: ..
       dockerfile: services/catalog-service/Dockerfile
-
     env_file:
-      - .env
-
+      - ../.env
     depends_on:
       catalog-db:
         condition: service_healthy
-
-    entrypoint:
-      - uv
-      - run
-      - alembic
-      - upgrade
-      - head
-
+    entrypoint: ["uv", "run", "alembic", "upgrade", "head"]
     restart: "no"
-
+    networks:
+      - techshop
 
   catalog-service:
     build:
       context: ..
       dockerfile: services/catalog-service/Dockerfile
-
     env_file:
-      - .env
-
+      - ../.env
     depends_on:
       catalog-migrator:
         condition: service_completed_successfully
-
     ports:
       - "8000:8000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "from urllib.request import urlopen; urlopen('http://127.0.0.1:8000/health')",
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+      start_period: 10s
+    restart: unless-stopped
+    init: true
+    networks:
+      - techshop
 
+networks:
+  techshop:
+    driver: bridge
 
 volumes:
   catalog-db-data:
