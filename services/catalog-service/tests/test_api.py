@@ -40,7 +40,6 @@ class FakeProductService:
             name="Console",
             description="Current generation console",
             price=Decimal("499.99"),
-            quantity=10,
             category_id=category_id,
         )
 
@@ -87,7 +86,6 @@ def test_product_api_validates_and_paginates(client: TestClient) -> None:
         json={
             "name": "Console",
             "price": "0",
-            "quantity": -1,
             "category_id": str(category_service.category.id),
         },
     )
@@ -96,7 +94,6 @@ def test_product_api_validates_and_paginates(client: TestClient) -> None:
         json={
             "name": "Console",
             "price": "499.99",
-            "quantity": 10,
             "category_id": str(category_service.category.id),
         },
     )
@@ -105,7 +102,6 @@ def test_product_api_validates_and_paginates(client: TestClient) -> None:
         json={
             "name": "Console",
             "price": "499.99",
-            "quantity": 10,
             "category_id": str(uuid.uuid4()),
         },
     )

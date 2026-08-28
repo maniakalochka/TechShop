@@ -6,6 +6,7 @@ dependencies = [
     "alembic>=1.18.5",
     "asyncpg>=0.31.0",
     "fastapi>=0.141.1",
+    "faststream[rabbit]>=0.7.5",
     "greenlet>=3.5.4",
     "psycopg2-binary>=2.9.12",
     "pydantic>=2.13.4",
@@ -45,6 +46,7 @@ select = [
 ]
 
 ignore = [
+    "E501",
     "S101",
 ]
 [tool.ruff.lint.flake8-bugbear]
@@ -61,7 +63,7 @@ line-ending = "lf"
 [tool.mypy]
 python_version = "3.13"
 explicit_package_bases = true
-mypy_path = ["services/catalog-service/src"]
+mypy_path = ["packages/contracts/src", "services/catalog-service/src", "services/inventory-service/src"]
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -72,15 +74,19 @@ check_untyped_defs = true
 exclude = [
     "alembic/",
 ]
-files = ["services/catalog-service/src", "services/catalog-service/tests"]
+files = ["packages/contracts/src", "services/catalog-service/src", "services/catalog-service/tests", "services/inventory-service/src", "services/inventory-service/tests"]
 
 [tool.pytest.ini_options]
 pythonpath = [
     "services/catalog-service/src",
     "services/catalog-service/tests",
+    "packages/contracts/src",
+    "services/inventory-service/src",
+    "services/inventory-service/tests",
 ]
 testpaths = [
     "services/catalog-service/tests",
+    "services/inventory-service/tests",
 ]
 addopts = "-ra"
 markers = [

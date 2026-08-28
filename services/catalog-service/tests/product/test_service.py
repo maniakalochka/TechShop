@@ -39,7 +39,6 @@ async def test_create_product_persists_valid_payload(category_id: uuid.UUID) -> 
         name="Console",
         description="Current generation console",
         price=Decimal("499.99"),
-        quantity=10,
         category_id=category_id,
     )
 
@@ -57,7 +56,6 @@ async def test_create_product_requires_existing_category(category_id: uuid.UUID)
     payload = ProductCreate(
         name="Console",
         price=Decimal("499.99"),
-        quantity=10,
         category_id=category_id,
     )
 

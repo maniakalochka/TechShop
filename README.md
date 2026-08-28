@@ -6,7 +6,7 @@ TechShop is a portfolio microservice backend for an online electronics store. Th
 
 - Python 3.13 and uv
 - FastAPI, Pydantic 2, SQLAlchemy 2 (async)
-- PostgreSQL 17 and Alembic
+- PostgreSQL 17, RabbitMQ, FastStream and Alembic
 - Docker Compose, pytest, Ruff and mypy
 
 ## Run locally
@@ -34,7 +34,7 @@ Products and categories expose the same CRUD shape:
 | Update | `PATCH /categories/{id}` | `PATCH /products/{id}` |
 | Delete | `DELETE /categories/{id}` | `DELETE /products/{id}` |
 
-A product requires an existing `category_id`. Prices are positive decimals with at most two fractional digits; quantities cannot be negative. List endpoints are ordered by name and support `limit` from 1 through 100 and a non-negative `offset`.
+A product requires an existing `category_id`. Prices are positive decimals with at most two fractional digits. Inventory is owned by `inventory-service`; list endpoints are ordered by name and support `limit` from 1 through 100 and a non-negative `offset`.
 
 ## Development checks
 
@@ -57,4 +57,4 @@ Install Git hooks once with `uv run pre-commit install`. GitHub Actions runs for
 
 ## Architecture direction
 
-The next bounded service should be `inventory-service`, responsible for stock and reservations. It should communicate with the future `order-service` through explicit domain events, using FastStream with RabbitMQ or Kafka only once such an integration exists. Services must own their own data and must not write directly to another service's database.
+`inventory-service` owns stock balances, movements and order reservations. Services communicate through versioned, durable RabbitMQ events on the `techshop.events` topic exchange. Catalog publishes product lifecycle events through a transactional outbox; inventory consumes them to create/deactivate zero-balance items. The future `order-service` publishes `order.created.v1`, `order.cancelled.v1` and `order.paid.v1`; inventory responds with the matching reservation-result events. Services own their own data and must not write directly to another service's database.

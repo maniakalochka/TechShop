@@ -18,7 +18,9 @@ class Settings(BaseSettings):
     CATALOG_DB_NAME: str
     CATALOG_DB_HOST: str
     CATALOG_DB_PORT: int
+    RABBITMQ_URL: str = "amqp://guest:guest@rabbitmq:5672/"
     DB_ECHO: bool = False
+    TESTING: bool = False
 
 
 @lru_cache
