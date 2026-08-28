@@ -1,0 +1,1 @@
+"""TechShop inventory bounded context."""
