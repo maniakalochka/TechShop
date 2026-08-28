@@ -3,7 +3,9 @@ from collections.abc import Sequence
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from techshop_contracts.events import EventEnvelope, EventType
 
+from catalog_service.messaging.model import OutboxMessage
 from catalog_service.product.model import Product
 
 
@@ -13,6 +15,15 @@ class ProductRepository:
 
     async def create_product(self, product: Product) -> Product:
         self.session.add(product)
+        await self.session.flush()
+        event = EventEnvelope(
+            event_type=EventType.CATALOG_PRODUCT_CREATED,
+            correlation_id=product.id,
+            payload={"product_id": str(product.id)},
+        )
+        self.session.add(
+            OutboxMessage(routing_key=event.event_type.value, payload=event.model_dump(mode="json"))
+        )
         await self.session.commit()
         await self.session.refresh(product)
         return product
@@ -31,6 +42,14 @@ class ProductRepository:
         return product
 
     async def delete_product(self, product: Product) -> None:
+        event = EventEnvelope(
+            event_type=EventType.CATALOG_PRODUCT_DELETED,
+            correlation_id=product.id,
+            payload={"product_id": str(product.id)},
+        )
+        self.session.add(
+            OutboxMessage(routing_key=event.event_type.value, payload=event.model_dump(mode="json"))
+        )
         await self.session.delete(product)
         await self.session.commit()
 

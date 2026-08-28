@@ -1,7 +1,11 @@
+import os
 import uuid
 from collections.abc import Generator
 
 import pytest
+
+os.environ.setdefault("TESTING", "true")
+
 from catalog_service.main import app
 from fastapi.testclient import TestClient
 

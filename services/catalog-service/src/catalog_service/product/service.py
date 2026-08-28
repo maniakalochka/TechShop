@@ -40,7 +40,6 @@ class ProductService:
             name=payload.name,
             description=payload.description,
             price=payload.price,
-            quantity=payload.quantity,
             category_id=payload.category_id,
         )
 

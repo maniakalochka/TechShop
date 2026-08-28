@@ -37,7 +37,6 @@ async def test_repository_commits_product_and_preserves_decimal_price() -> None:
                 name="Console",
                 description="Current generation console",
                 price=Decimal("499.99"),
-                quantity=10,
                 category_id=category.id,
             )
         )

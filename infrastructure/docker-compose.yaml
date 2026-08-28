@@ -1,6 +1,20 @@
 name: techshop
 
 services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    restart: unless-stopped
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    networks:
+      - techshop
+
   catalog-db:
     image: postgres:17
     restart: unless-stopped
@@ -48,6 +62,8 @@ services:
     depends_on:
       catalog-migrator:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     ports:
       - "8000:8000"
     healthcheck:
@@ -67,9 +83,53 @@ services:
     networks:
       - techshop
 
+  inventory-db:
+    image: postgres:17
+    restart: unless-stopped
+    env_file: [../.env]
+    environment:
+      POSTGRES_USER: ${INVENTORY_DB_USER:?INVENTORY_DB_USER must be set}
+      POSTGRES_PASSWORD: ${INVENTORY_DB_PASSWORD:?INVENTORY_DB_PASSWORD must be set}
+      POSTGRES_DB: ${INVENTORY_DB_NAME:?INVENTORY_DB_NAME must be set}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    volumes: [inventory-db-data:/var/lib/postgresql/data]
+    networks: [techshop]
+
+  inventory-migrator:
+    build:
+      context: ..
+      dockerfile: services/inventory-service/Dockerfile
+    env_file: [../.env]
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+    entrypoint: ["uv", "run", "alembic", "upgrade", "head"]
+    restart: "no"
+    networks: [techshop]
+
+  inventory-service:
+    build:
+      context: ..
+      dockerfile: services/inventory-service/Dockerfile
+    env_file: [../.env]
+    depends_on:
+      inventory-migrator:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+    ports: ["8001:8001"]
+    restart: unless-stopped
+    init: true
+    networks: [techshop]
+
 networks:
   techshop:
     driver: bridge
 
 volumes:
   catalog-db-data:
+  inventory-db-data:

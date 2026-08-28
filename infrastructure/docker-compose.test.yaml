@@ -1,4 +1,12 @@
 services:
+  rabbitmq-test:
+    image: rabbitmq:4-management
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
   catalog-test-db:
     image: postgres:17
     environment:
@@ -6,7 +14,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: catalog_test
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d catalog_test"]
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d catalog_test" ]
       interval: 2s
       timeout: 3s
       retries: 15
@@ -26,10 +34,14 @@ services:
       CATALOG_DB_PORT: 5432
       DB_ECHO: "false"
       RUN_DB_TESTS: "true"
+      TESTING: "true"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq-test:5672/
     depends_on:
       catalog-test-migrator:
         condition: service_completed_successfully
-    entrypoint: ["uv", "run", "pytest"]
+      rabbitmq-test:
+        condition: service_healthy
+    entrypoint: [ "uv", "run", "pytest" ]
 
   catalog-test-migrator:
     build:
@@ -45,7 +57,54 @@ services:
       CATALOG_DB_HOST: catalog-test-db
       CATALOG_DB_PORT: 5432
       DB_ECHO: "false"
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq-test:5672/
     depends_on:
       catalog-test-db:
         condition: service_healthy
-    entrypoint: ["uv", "run", "alembic", "upgrade", "head"]
+    entrypoint: [ "uv", "run", "alembic", "upgrade", "head" ]
+
+  inventory-test-db:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: inventory_test
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d inventory_test" ]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  inventory-test-migrator:
+    build:
+      context: ..
+      dockerfile: services/inventory-service/Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    environment: &inventory_test_env
+      INVENTORY_DB_URL: postgresql+asyncpg://postgres:postgres@inventory-test-db:5432/inventory_test
+      INVENTORY_DB_USER: postgres
+      INVENTORY_DB_PASSWORD: postgres
+      INVENTORY_DB_NAME: inventory_test
+      INVENTORY_DB_HOST: inventory-test-db
+      INVENTORY_DB_PORT: 5432
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq-test:5672/
+      DB_ECHO: "false"
+    depends_on:
+      inventory-test-db:
+        condition: service_healthy
+    entrypoint: [ "uv", "run", "alembic", "upgrade", "head" ]
+
+  inventory-tests:
+    build:
+      context: ..
+      dockerfile: services/inventory-service/Dockerfile
+      args:
+        INSTALL_DEV: "true"
+    environment: *inventory_test_env
+    depends_on:
+      inventory-test-migrator:
+        condition: service_completed_successfully
+      rabbitmq-test:
+        condition: service_healthy
+    entrypoint: [ "uv", "run", "pytest", "tests" ]
